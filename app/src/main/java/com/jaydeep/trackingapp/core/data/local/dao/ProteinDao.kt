@@ -14,10 +14,10 @@ interface ProteinDao {
     fun getAll(): Flow<List<ProteinEntity>>
 
     @Query("SELECT * FROM protein WHERE id = :id")
-    suspend fun getById(id: String): ProteinEntity?
+    suspend fun getById(id: Long): ProteinEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(protein: ProteinEntity)
+    suspend fun insert(protein: ProteinEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(proteins: List<ProteinEntity>)
@@ -26,11 +26,11 @@ interface ProteinDao {
     suspend fun update(protein: ProteinEntity)
 
     @Query("DELETE FROM protein WHERE id = :id")
-    suspend fun deleteById(id: String)
+    suspend fun deleteById(id: Long)
 
     @Query("SELECT * FROM protein WHERE isSynced = 0")
     suspend fun getUnsynced(): List<ProteinEntity>
 
     @Query("UPDATE protein SET isSynced = 1 WHERE id = :id")
-    suspend fun markSynced(id: String)
+    suspend fun markSynced(id: Long)
 }

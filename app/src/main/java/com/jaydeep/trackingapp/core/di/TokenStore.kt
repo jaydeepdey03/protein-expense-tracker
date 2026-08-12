@@ -24,6 +24,9 @@ class TokenStore @Inject constructor(
         private val KEY_USER_ID       = stringPreferencesKey("user_id")
         private val KEY_USER_NAME     = stringPreferencesKey("user_name")
         private val KEY_USER_EMAIL    = stringPreferencesKey("user_email")
+        private val KEY_THEME_MODE    = stringPreferencesKey("theme_mode")
+        private val KEY_PROTEIN_GOAL  = stringPreferencesKey("protein_goal")
+        private val KEY_EXPENSE_BUDGET = stringPreferencesKey("expense_budget")
     }
 
     suspend fun saveTokens(accessToken: String, refreshToken: String) {
@@ -49,6 +52,21 @@ class TokenStore @Inject constructor(
 
     val refreshTokenFlow: Flow<String?> = context.tokenDataStore.data
         .map { it[KEY_REFRESH_TOKEN] }
+
+    val themeMode: Flow<String> = context.tokenDataStore.data
+        .map { it[KEY_THEME_MODE] ?: "SYSTEM" }
+
+    val userName: Flow<String> = context.tokenDataStore.data
+        .map { it[KEY_USER_NAME] ?: "" }
+
+    val userEmail: Flow<String> = context.tokenDataStore.data
+        .map { it[KEY_USER_EMAIL] ?: "" }
+
+    val proteinGoal: Flow<Float> = context.tokenDataStore.data
+        .map { it[KEY_PROTEIN_GOAL]?.toFloatOrNull() ?: 120f }
+
+    val expenseBudget: Flow<Float> = context.tokenDataStore.data
+        .map { it[KEY_EXPENSE_BUDGET]?.toFloatOrNull() ?: 25000f }
 
     // ── Read (suspend — one-shot, for interceptors/authenticator) ─────────────
 
@@ -82,5 +100,17 @@ class TokenStore @Inject constructor(
             prefs[KEY_USER_NAME]  = name
             prefs[KEY_USER_EMAIL] = email
         }
+    }
+
+    suspend fun saveThemeMode(mode: String) {
+        context.tokenDataStore.edit { it[KEY_THEME_MODE] = mode }
+    }
+
+    suspend fun saveProteinGoal(goal: Float) {
+        context.tokenDataStore.edit { it[KEY_PROTEIN_GOAL] = goal.toString() }
+    }
+
+    suspend fun saveExpenseBudget(budget: Float) {
+        context.tokenDataStore.edit { it[KEY_EXPENSE_BUDGET] = budget.toString() }
     }
 }

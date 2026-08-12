@@ -1,13 +1,17 @@
 package com.jaydeep.trackingapp.core.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.jaydeep.trackingapp.features.auth.ui.LoginScreen
@@ -16,13 +20,42 @@ import com.jaydeep.trackingapp.features.expenses.ui.ExpenseEditScreen
 import com.jaydeep.trackingapp.features.expenses.ui.ExpenseListScreen
 import com.jaydeep.trackingapp.features.protein.ui.ProteinEditScreen
 import com.jaydeep.trackingapp.features.protein.ui.ProteinListScreen
+import com.jaydeep.trackingapp.features.status.HealthStatusScreen
 import com.jaydeep.trackingapp.features.status.StatusScreen
+import com.jaydeep.trackingapp.ui.screens.ProfileScreen
 
 @Composable
 fun AppNavGraph(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
     startDestination: String = Screens.Login.route,
+) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    val mainRoutes = listOf(
+        Screens.Dashboard.route,
+        Screens.Status.route,
+        Screens.Summary.route,
+        Screens.Profile.route,
+    )
+
+    val showBottomBar = currentRoute in mainRoutes
+
+    if (showBottomBar) {
+        MainScreen(navController = navController) {
+            NavContent(navController, modifier, startDestination)
+        }
+    } else {
+        NavContent(navController, modifier, startDestination)
+    }
+}
+
+@Composable
+fun NavContent(
+    navController: NavHostController,
+    modifier: Modifier,
+    startDestination: String
 ) {
     NavHost(
         navController = navController,
@@ -44,10 +77,12 @@ fun AppNavGraph(
         // ── Dashboard ────────────────────────────────────────────────────────
         composable(Screens.Dashboard.route) {
             DashboardScreen(
-                onNavigateToExpenses = { navController.navigate(Screens.ExpenseList.route) },
-                onNavigateToProtein  = { navController.navigate(Screens.ProteinList.route) },
-                onNavigateToStatus   = { navController.navigate(Screens.Status.route) },
-                onNavigateToSettings = { navController.navigate(Screens.Settings.route) },
+                onNavigateToExpenseEdit = { id ->
+                    navController.navigate(Screens.ExpenseEdit.createRoute(id))
+                },
+                onNavigateToProteinEdit = { id ->
+                    navController.navigate(Screens.ProteinEdit.createRoute(id))
+                },
                 onLogout = {
                     navController.navigate(Screens.Login.route) {
                         popUpTo(0) { inclusive = true }
@@ -58,17 +93,14 @@ fun AppNavGraph(
 
         // ── Status ───────────────────────────────────────────────────────────
         composable(Screens.Status.route) {
-            StatusScreen(
-                onNavigateToExpenses = { navController.navigate(Screens.ExpenseList.route) },
-                onNavigateToProtein  = { navController.navigate(Screens.ProteinList.route) },
-                onNavigateToSummary  = { navController.navigate(Screens.Dashboard.route) },
-                onNavigateToSettings = { navController.navigate(Screens.Settings.route) },
-                onLogout = {
-                    navController.navigate(Screens.Login.route) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                }
-            )
+            StatusScreen()
+        }
+
+        // ── Analytics (Summary) ──────────────────────────────────────────────
+        composable(Screens.Summary.route) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(text = "Analytics Coming Soon", style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
+            }
         }
 
         // ── Expenses ──────────────────────────────────────────────────────────
@@ -129,12 +161,28 @@ fun AppNavGraph(
             )
         }
 
-        // ── Settings ──────────────────────────────────────────────────────────
+        // ── Profile ──────────────────────────────────────────────────────────
+        composable(Screens.Profile.route) {
+            ProfileScreen(
+                onNavigateToHealthStatus = { navController.navigate(Screens.HealthStatus.route) }
+            )
+        }
+
         composable(Screens.Settings.route) {
-            // Placeholder for Settings
-            androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                Text("Settings Screen (Coming Soon)")
-            }
+            ProfileScreen(
+                onNavigateToHealthStatus = { navController.navigate(Screens.HealthStatus.route) }
+            )
+        }
+
+        composable(Screens.HealthStatus.route) {
+            HealthStatusScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onLogout = {
+                    navController.navigate(Screens.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }

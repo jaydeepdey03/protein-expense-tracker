@@ -1,31 +1,27 @@
 package com.jaydeep.trackingapp.features.dashboard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -33,637 +29,369 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.jaydeep.trackingapp.core.ui.CategoryUtils
+import com.jaydeep.trackingapp.ui.theme.LocalTrackerColors
 
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
-    onNavigateToExpenses: () -> Unit,
-    onNavigateToProtein: () -> Unit,
-    onNavigateToStatus: () -> Unit,
-    onNavigateToSettings: () -> Unit,
+    onNavigateToExpenseEdit: (String) -> Unit,
+    onNavigateToProteinEdit: (String) -> Unit,
     onLogout: () -> Unit,
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var selectedTab by remember { mutableIntStateOf(0) }
 
-    var showLogoutDialog by remember {
-        mutableStateOf(false)
-    }
-
-    // ---------------------------------------------------------
-    // Logout observer
-    // ---------------------------------------------------------
-
-    LaunchedEffect(uiState.isLoggedOut) {
-        if (uiState.isLoggedOut) {
-            onLogout()
-        }
-    }
-
-    // ---------------------------------------------------------
-    // Logout dialog
-    // ---------------------------------------------------------
-
-    if (showLogoutDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                showLogoutDialog = false
-            },
-            title = {
-                Text(
-                    text = "Logout",
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Text(
-                    text = "Are you sure you want to logout?"
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showLogoutDialog = false
-                        viewModel.logout()
-                    }
-                ) {
-                    Text(
-                        text = "Logout",
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showLogoutDialog = false
-                    }
-                ) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    // ---------------------------------------------------------
-    // Screen
-    // ---------------------------------------------------------
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "Tracker",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Text(
-                            text = "Your daily overview",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-
-                actions = {
-
-                    // Status
-                    IconButton(
-                        onClick = onNavigateToStatus
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = "Status"
-                        )
-                    }
-
-                    // Settings
-                    IconButton(
-                        onClick = onNavigateToSettings
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings"
-                        )
-                    }
-
-                    // Logout
-                    IconButton(
-                        onClick = {
-                            showLogoutDialog = true
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                            contentDescription = "Logout"
-                        )
-                    }
-                },
-
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        }
-    ) { paddingValues ->
-
-        // -----------------------------------------------------
-        // Loading
-        // -----------------------------------------------------
-
-        if (uiState.isLoading && uiState.userName.isEmpty()) {
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-
-            return@Scaffold
-        }
-
-        // -----------------------------------------------------
-        // Main content
-        // -----------------------------------------------------
-
-        Column(
+    PullToRefreshBox(
+        isRefreshing = uiState.isLoading,
+        onRefresh = { viewModel.refresh() },
+        modifier = Modifier.fillMaxSize()
+    ) {
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-
-            Spacer(
-                modifier = Modifier.height(4.dp)
-            )
-
-            // -------------------------------------------------
-            // Welcome
-            // -------------------------------------------------
-
-            WelcomeCard(
-                userName = uiState.userName,
-            )
-
-            // -------------------------------------------------
-            // Section title
-            // -------------------------------------------------
-
-            Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-
-                Text(
-                    text = "Today",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Text(
-                    text = "Keep track of your protein and spending",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // -------------------------------------------------
-            // Protein + Expenses
-            // -------------------------------------------------
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-
-                DashboardActionCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.FitnessCenter,
-                    title = "Protein",
-                    subtitle = "Track your intake",
-                    accent = MaterialTheme.colorScheme.secondary,
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    onClick = onNavigateToProtein
-                )
-
-                DashboardActionCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.AccountBalanceWallet,
-                    title = "Expenses",
-                    subtitle = "Track your spending",
-                    accent = MaterialTheme.colorScheme.primary,
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    onClick = onNavigateToExpenses
-                )
-            }
-
-            // -------------------------------------------------
-            // Progress
-            // -------------------------------------------------
-
-            ProgressCard()
-
-            Spacer(
-                modifier = Modifier.height(8.dp)
-            )
-        }
-    }
-}
-
-
-// =====================================================================
-// Welcome Card
-// =====================================================================
-
-@Composable
-private fun WelcomeCard(
-    userName: String
-) {
-    val firstName = userName
-        .trim()
-        .split(" ")
-        .firstOrNull()
-        ?.ifEmpty { "there" }
-        ?: "there"
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
-        )
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.primaryContainer
-                        )
-                    ),
-                    shape = RoundedCornerShape(28.dp)
-                )
-                .padding(22.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(
-                            MaterialTheme.colorScheme.onPrimary.copy(
-                                alpha = 0.18f
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = firstName
-                            .firstOrNull()
-                            ?.uppercaseChar()
-                            ?.toString()
-                            ?: "?",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-
-                Spacer(
-                    modifier = Modifier.width(14.dp)
-                )
-
-                Column {
-                    Text(
-                        text = "Hello, $firstName 👋",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-
-                    Spacer(
-                        modifier = Modifier.height(4.dp)
-                    )
-
-                    Text(
-                        text = "Let's make today count.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(
-                            alpha = 0.8f
-                        )
-                    )
-                }
-            }
-        }
-    }
-}
-
-
-// =====================================================================
-// Dashboard Action Card
-// =====================================================================
-
-@Composable
-private fun DashboardActionCard(
-    modifier: Modifier = Modifier,
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    accent: Color,
-    containerColor: Color,
-    onClick: () -> Unit
-) {
-
-    Card(
-        onClick = onClick,
-
-        modifier = modifier
-            .aspectRatio(0.92f),
-
-        shape = RoundedCornerShape(24.dp),
-
-        colors = CardDefaults.cardColors(
-            containerColor = containerColor
-        ),
-
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 0.dp
-        )
-    ) {
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(18.dp),
-
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-
-            // ---------------------------------------------
-            // Icon
-            // ---------------------------------------------
-
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(15.dp))
-                    .background(
-                        accent.copy(alpha = 0.15f)
-                    ),
-
-                contentAlignment = Alignment.Center
-            ) {
-
-                Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    tint = accent,
-                    modifier = Modifier.size(25.dp)
-                )
-            }
-
-            // ---------------------------------------------
-            // Text
-            // ---------------------------------------------
-
-            Column(
-                verticalArrangement = Arrangement.spacedBy(5.dp)
-            ) {
-
-                Text(
-                    text = title,
-
-                    style = MaterialTheme.typography.titleLarge,
-
-                    fontWeight = FontWeight.Bold,
-
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                Text(
-                    text = subtitle,
-
-                    style = MaterialTheme.typography.bodySmall,
-
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(
-                    modifier = Modifier.height(4.dp)
-                )
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-
-                    Text(
-                        text = "Open",
-
-                        style = MaterialTheme.typography.labelMedium,
-
-                        fontWeight = FontWeight.SemiBold,
-
-                        color = accent
-                    )
-
-                    Spacer(
-                        modifier = Modifier.width(4.dp)
-                    )
-
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        tint = accent,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-
-// =====================================================================
-// Progress Card
-// =====================================================================
-
-@Composable
-private fun ProgressCard() {
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-
-        shape = RoundedCornerShape(24.dp),
-
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-
-        Column(
-            modifier = Modifier.padding(20.dp),
-
+                .background(MaterialTheme.colorScheme.background),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            item {
+                DashboardHeader(uiState.userName, uiState.today)
+            }
 
-            // ---------------------------------------------
-            // Header
-            // ---------------------------------------------
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-
-                    Text(
-                        text = "Your progress",
-
-                        style = MaterialTheme.typography.titleMedium,
-
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Text(
-                        text = "Stay consistent with your goals",
-
-                        style = MaterialTheme.typography.bodySmall,
-
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Icon(
-                    imageVector = Icons.Default.LocalFireDepartment,
-
-                    contentDescription = null,
-
-                    tint = MaterialTheme.colorScheme.primary,
-
-                    modifier = Modifier.size(28.dp)
+            item {
+                ProgressSummaryCard(
+                    proteinConsumed = uiState.todayProteinTotal,
+                    proteinGoal = uiState.dailyProteinGoal.toDouble(),
+                    expenseTotal = uiState.monthlyExpenseTotal,
+                    expenseBudget = uiState.monthlyExpenseBudget.toDouble()
                 )
             }
 
-            // ---------------------------------------------
-            // Stats
-            // ---------------------------------------------
+            item {
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    indicator = { tabPositions ->
+                        TabRowDefaults.SecondaryIndicator(
+                            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    divider = {}
+                ) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = {
+                            Text(
+                                "Protein",
+                                fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    )
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        text = {
+                            Text(
+                                "Expenses",
+                                fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    )
+                }
+            }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-
-                MiniStat(
-                    modifier = Modifier.weight(1f),
-                    value = "—",
-                    label = "Protein"
-                )
-
-                MiniStat(
-                    modifier = Modifier.weight(1f),
-                    value = "—",
-                    label = "Expenses"
-                )
-
-                MiniStat(
-                    modifier = Modifier.weight(1f),
-                    value = "Today",
-                    label = "Tracking"
-                )
+            if (selectedTab == 0) {
+                if (uiState.recentProteins.isEmpty()) {
+                    item {
+                        Box(modifier = Modifier.height(200.dp), contentAlignment = Alignment.Center) {
+                            EmptyState("No protein entries yet", "Start tracking your protein intake")
+                        }
+                    }
+                } else {
+                    items(uiState.recentProteins) { item ->
+                        ListItemCard(
+                            title = item.foodName,
+                            subtitle = "Protein · ${item.date}",
+                            value = "${item.proteinGrams.toInt()} g",
+                            category = item.foodName,
+                            isProtein = true,
+                            onClick = { onNavigateToProteinEdit(item.id.toString()) }
+                        )
+                    }
+                }
+            } else {
+                if (uiState.recentExpenses.isEmpty()) {
+                    item {
+                        Box(modifier = Modifier.height(200.dp), contentAlignment = Alignment.Center) {
+                            EmptyState("No expenses yet", "Start tracking your spending")
+                        }
+                    }
+                } else {
+                    items(uiState.recentExpenses) { item ->
+                        ListItemCard(
+                            title = item.title,
+                            subtitle = "${item.category} · ${item.date}",
+                            value = "₹${item.amount.toInt()}",
+                            category = item.category,
+                            isProtein = false,
+                            onClick = { onNavigateToExpenseEdit(item.id) }
+                        )
+                    }
+                }
             }
         }
     }
 }
 
-
-// =====================================================================
-// Mini Stat
-// =====================================================================
-
 @Composable
-private fun MiniStat(
-    modifier: Modifier = Modifier,
-    value: String,
-    label: String
-) {
+fun DashboardHeader(userName: String, date: String) {
+    val greeting = when (java.time.LocalTime.now().hour) {
+        in 0..11 -> "Good morning"
+        in 12..16 -> "Good afternoon"
+        else -> "Good evening"
+    }
 
-    Surface(
-        modifier = modifier,
-
-        shape = RoundedCornerShape(16.dp),
-
-        color = MaterialTheme.colorScheme.surface
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-
-        Column(
-            modifier = Modifier.padding(
-                horizontal = 12.dp,
-                vertical = 14.dp
-            ),
-
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-
+        Column {
             Text(
-                text = value,
-
-                style = MaterialTheme.typography.titleMedium,
-
-                fontWeight = FontWeight.Bold
+                text = greeting,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-
-            Spacer(
-                modifier = Modifier.height(2.dp)
-            )
-
             Text(
-                text = label,
-
-                style = MaterialTheme.typography.labelSmall,
-
+                text = userName,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = date,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+@Composable
+fun ProgressSummaryCard(
+    proteinConsumed: Double,
+    proteinGoal: Double,
+    expenseTotal: Double,
+    expenseBudget: Double
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(24.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            CircularProgressWithLabel(
+                progress = (proteinConsumed / proteinGoal).toFloat(),
+                label = "Protein",
+                valueText = "${proteinConsumed.toInt()}g / ${proteinGoal.toInt()}g",
+                color = LocalTrackerColors.current.protein
+            )
+            CircularProgressWithLabel(
+                progress = (expenseTotal / expenseBudget).toFloat(),
+                label = "Expense",
+                valueText = "₹${expenseTotal.toInt()} / ₹${expenseBudget.toInt()}",
+                color = LocalTrackerColors.current.expense
+            )
+        }
+    }
+}
+
+@Composable
+fun CircularProgressWithLabel(
+    progress: Float,
+    label: String,
+    valueText: String,
+    color: Color
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(
+                progress = { 1f },
+                modifier = Modifier.size(80.dp),
+                color = color.copy(alpha = 0.1f),
+                strokeWidth = 8.dp,
+                strokeCap = StrokeCap.Round
+            )
+            CircularProgressIndicator(
+                progress = { progress.coerceIn(0f, 1f) },
+                modifier = Modifier.size(80.dp),
+                color = color,
+                strokeWidth = 8.dp,
+                strokeCap = StrokeCap.Round
+            )
+            Text(
+                text = "${"%.2f".format(progress * 100)}%",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(text = label, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+        Text(text = valueText, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+fun ProteinList(
+    proteins: List<RecentProteinItem>,
+    onEdit: (String) -> Unit
+) {
+    if (proteins.isEmpty()) {
+        EmptyState("No protein entries yet", "Start tracking your protein intake")
+    } else {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(proteins) { item ->
+                ListItemCard(
+                    title = item.foodName,
+                    subtitle = "Protein · Today",
+                    value = "${item.proteinGrams.toInt()} g",
+                    category = item.foodName,
+                    isProtein = true,
+                    onClick = { onEdit(item.id.toString()) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ExpenseList(
+    expenses: List<RecentExpenseItem>,
+    onEdit: (String) -> Unit
+) {
+    if (expenses.isEmpty()) {
+        EmptyState("No expenses yet", "Start tracking your spending")
+    } else {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(expenses) { item ->
+                ListItemCard(
+                    title = item.title,
+                    subtitle = "${item.category} · Today",
+                    value = "₹${item.amount.toInt()}",
+                    category = item.category,
+                    isProtein = false,
+                    onClick = { onEdit(item.id) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ListItemCard(
+    title: String,
+    subtitle: String,
+    value: String,
+    category: String,
+    isProtein: Boolean,
+    onDelete: (() -> Unit)? = null,
+    onClick: () -> Unit
+) {
+    val trackerColors = LocalTrackerColors.current
+    val categoryInfo = if (isProtein) {
+        CategoryUtils.getProteinCategoryInfo(category, trackerColors)
+    } else {
+        CategoryUtils.getExpenseCategoryInfo(category, trackerColors)
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(categoryInfo.color.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = categoryInfo.icon,
+                    contentDescription = null,
+                    tint = categoryInfo.color,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = title, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
+                Text(text = subtitle, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text(text = value, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
+            
+            if (onDelete != null) {
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Default.DeleteOutline,
+                        contentDescription = "Delete",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun EmptyState(title: String, subtitle: String) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = title, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
+        Text(text = subtitle, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

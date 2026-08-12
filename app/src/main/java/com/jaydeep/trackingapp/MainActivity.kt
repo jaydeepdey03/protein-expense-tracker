@@ -1,52 +1,42 @@
 package com.jaydeep.trackingapp
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
-import androidx.compose.ui.Modifier
-import androidx.lifecycle.lifecycleScope
-import com.jaydeep.trackingapp.core.di.TokenStore
+import androidx.activity.viewModels
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.jaydeep.trackingapp.core.auth.AuthState
+import com.jaydeep.trackingapp.core.auth.AuthViewModel
 import com.jaydeep.trackingapp.core.ui.AppNavGraph
-import com.jaydeep.trackingapp.core.ui.Screens
+import com.jaydeep.trackingapp.ui.theme.ThemeViewModel
 import com.jaydeep.trackingapp.ui.theme.TrackingAppTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    @Inject
-    lateinit var tokenStore: TokenStore
+    private val themeViewModel: ThemeViewModel by viewModels()
+    private val authViewModel: AuthViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        setContent {
+            val themeMode by themeViewModel.themeMode.collectAsState()
+            val authState by authViewModel.authState.collectAsState()
 
-        Log.e(
-            "TrackingApp",
-            "========== MAIN ACTIVITY STARTED =========="
-        )
-
-        lifecycleScope.launch {
-            val startDestination = if (tokenStore.hasValidToken()) {
-                Screens.Dashboard.route
-            } else {
-                Screens.Login.route
-            }
-
-            setContent {
-                TrackingAppTheme {
-                    Surface(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        AppNavGraph(
-                            startDestination = startDestination
-                        )
+            TrackingAppTheme(themeMode = themeMode, dynamicColor = false) {
+                when (val state = authState) {
+                    is AuthState.Loading -> {
+                        // Optional: Show a splash screen or loader
+                    }
+                    is AuthState.Authenticated -> {
+                        AppNavGraph(startDestination = state.startDestination)
+                    }
+                    is AuthState.Unauthenticated -> {
+                        AppNavGraph(startDestination = state.startDestination)
                     }
                 }
             }

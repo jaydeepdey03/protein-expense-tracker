@@ -1,0 +1,5 @@
+- [x] Schedule `SyncWorker` in `TrackingApplication.kt`
+- [x] Improve `SyncWorker.kt` logic to handle updates
+- [x] Update `ProteinRepository.kt` to trigger push sync
+- [x] Update `ExpenseRepository.kt` to trigger push sync
+- [/] Verify sync works by checking logs/UI state

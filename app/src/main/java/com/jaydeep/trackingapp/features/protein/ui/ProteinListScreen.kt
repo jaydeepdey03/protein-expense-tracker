@@ -1,20 +1,21 @@
 package com.jaydeep.trackingapp.features.protein.ui
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.jaydeep.trackingapp.core.data.local.entities.ProteinEntity
+import com.jaydeep.trackingapp.features.dashboard.EmptyState
+import com.jaydeep.trackingapp.features.dashboard.ListItemCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,108 +25,57 @@ fun ProteinListScreen(
     viewModel: ProteinViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.listUiState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(Unit) { viewModel.syncProteins() }
-
-    LaunchedEffect(uiState.errorMessage) {
-        uiState.errorMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.onListErrorShown()
-        }
-    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Protein") },
+                title = { Text("Protein History") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { onNavigateToEdit(null) }) {
-                Icon(Icons.Default.Add, contentDescription = "Add protein entry")
-            }
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        }
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding),
         ) {
-            when {
-                uiState.isLoading && uiState.proteins.isEmpty() ->
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-
-                uiState.proteins.isEmpty() ->
-                    Text(
-                        text = "No protein entries yet.\nTap + to add one.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.align(Alignment.Center),
-                    )
-
-                else ->
-                    LazyColumn(
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        items(uiState.proteins, key = { it.id }) { protein ->
-                            ProteinListItem(
-                                protein = protein,
-                                onClick = { onNavigateToEdit(protein.id.toString()) },
+            PullToRefreshBox(
+                isRefreshing = uiState.isLoading,
+                onRefresh = { viewModel.syncProteins() },
+                modifier = Modifier.fillMaxSize()
+            ) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    if (uiState.proteins.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillParentMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                EmptyState("No protein entries yet", "Start tracking your protein intake")
+                            }
+                        }
+                    } else {
+                        items(uiState.proteins) { protein ->
+                            ListItemCard(
+                                title = protein.foodName,
+                                subtitle = "Protein · ${protein.date}",
+                                value = "${protein.proteinGrams.toInt()} g",
+                                category = protein.foodName,
+                                isProtein = true,
+                                onClick = { onNavigateToEdit(protein.id.toString()) }
                             )
                         }
                     }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProteinListItem(
-    protein: ProteinEntity,
-    onClick: () -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = protein.foodName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = protein.date,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = "${protein.proteinGrams}g",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                protein.calories?.let {
-                    Text(
-                        text = "$it kcal",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
             }
         }

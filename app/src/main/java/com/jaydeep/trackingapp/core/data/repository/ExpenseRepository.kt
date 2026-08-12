@@ -9,6 +9,7 @@ import com.jaydeep.trackingapp.core.data.remote.dto.UpdateExpenseEntryRequest
 import com.jaydeep.trackingapp.util.Result
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.util.UUID
 import javax.inject.Inject
@@ -18,6 +19,7 @@ import javax.inject.Singleton
 class ExpenseRepository @Inject constructor(
 private val expenseDao: ExpenseDao,
 private val expenseApi: ExpenseApi,
+private val workManager: androidx.work.WorkManager,
 ) {
 
     fun getExpenses(): Flow<List<ExpenseEntity>> = expenseDao.getAll()
@@ -25,9 +27,39 @@ private val expenseApi: ExpenseApi,
     suspend fun getExpenseById(id: String): ExpenseEntity? = expenseDao.getById(id)
 
     suspend fun syncExpenses(): Result<Unit> = withContext(Dispatchers.IO) {
-        // Full sync is no longer supported by the API.
-        // Syncing individual unsynced entries is handled by SyncWorker.
-        Result.Success(Unit)
+        // Push local changes first
+        com.jaydeep.trackingapp.core.sync.SyncWorker.enqueueNow(workManager)
+
+        runCatching {
+            val today = java.time.LocalDate.now()
+            // Sync last 7 days to catch deletions on other devices or previous sync failures
+            for (i in 0..6) {
+                val date = today.minusDays(i.toLong()).toString()
+                val response = expenseApi.getEntries(date)
+                if (response.isSuccessful) {
+                    val serverEntries = response.body() ?: emptyList()
+                    val serverIds = serverEntries.map { it.id }.toSet()
+
+                    // Get local synced entries for this date
+                    val localEntries = expenseDao.getAll().first().filter { 
+                        it.date == date && it.isSynced 
+                    }
+
+                    // Delete local entries that are no longer on server
+                    for (local in localEntries) {
+                        if (local.id !in serverIds) {
+                            expenseDao.deleteById(local.id)
+                        }
+                    }
+
+                    // Insert/Update from server
+                    expenseDao.insertAll(serverEntries.map { it.toEntity(isSynced = true) })
+                }
+            }
+            Result.Success(Unit)
+        }.getOrElse { 
+            Result.Error(it.message ?: "Sync failed")
+        }
     }
 
     suspend fun createExpense(

@@ -9,6 +9,7 @@ import com.jaydeep.trackingapp.core.data.remote.dto.UpdateProteinEntryRequest
 import com.jaydeep.trackingapp.util.Result
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,16 +18,47 @@ import javax.inject.Singleton
 class ProteinRepository @Inject constructor(
     private val proteinDao: ProteinDao,
     private val proteinApi: ProteinApi,
+    private val workManager: androidx.work.WorkManager,
 ) {
 
     fun getProteins(): Flow<List<ProteinEntity>> = proteinDao.getAll()
 
-    suspend fun getProteinById(id: String): ProteinEntity? = proteinDao.getById(id)
+    suspend fun getProteinById(id: Long): ProteinEntity? = proteinDao.getById(id)
 
     suspend fun syncProteins(): Result<Unit> = withContext(Dispatchers.IO) {
-        // Full sync is no longer supported by the API.
-        // Syncing individual unsynced entries is handled by SyncWorker.
-        Result.Success(Unit)
+        // Push local changes first
+        com.jaydeep.trackingapp.core.sync.SyncWorker.enqueueNow(workManager)
+
+        runCatching {
+            val today = java.time.LocalDate.now()
+            // Sync last 7 days
+            for (i in 0..6) {
+                val date = today.minusDays(i.toLong()).toString()
+                val response = proteinApi.getEntries(date)
+                if (response.isSuccessful) {
+                    val serverEntries = response.body() ?: emptyList()
+                    val serverRemoteIds = serverEntries.map { it.id }.toSet()
+
+                    // Get local synced entries for this date
+                    val localEntries = proteinDao.getAll().first().filter { 
+                        it.date == date && it.isSynced 
+                    }
+
+                    // Delete local entries that are no longer on server
+                    for (local in localEntries) {
+                        if (local.remoteId != null && local.remoteId !in serverRemoteIds) {
+                            proteinDao.deleteById(local.id)
+                        }
+                    }
+
+                    // Insert/Update from server
+                    proteinDao.insertAll(serverEntries.map { it.toEntity(isSynced = true) })
+                }
+            }
+            Result.Success(Unit)
+        }.getOrElse { 
+            Result.Error(it.message ?: "Sync failed")
+        }
     }
 
     suspend fun createProtein(
@@ -60,7 +92,7 @@ class ProteinRepository @Inject constructor(
             )
             if (response.isSuccessful) {
                 // Drop the local record, replace with server-assigned String id (remoteId)
-                proteinDao.deleteById(localId.toString())
+                proteinDao.deleteById(localId)
                 proteinDao.insert(response.body()!!.toEntity(isSynced = true))
             } else {
                 error("Create failed: ${response.code()}")
@@ -72,7 +104,7 @@ class ProteinRepository @Inject constructor(
     }
 
     suspend fun updateProtein(
-        id: String,
+        id: Long,
         foodName: String,
         gramsConsumed: Double,
         proteinGrams: Double,
@@ -84,7 +116,7 @@ class ProteinRepository @Inject constructor(
         
         proteinDao.update(
             ProteinEntity(
-                id = id.toLong(),
+                id = id,
                 remoteId = existing?.remoteId,
                 foodName = foodName,
                 gramsConsumed = gramsConsumed,
@@ -116,7 +148,7 @@ class ProteinRepository @Inject constructor(
         )
     }
 
-    suspend fun deleteProtein(id: String): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun deleteProtein(id: Long): Result<Unit> = withContext(Dispatchers.IO) {
         val existing = proteinDao.getById(id)
         proteinDao.deleteById(id)
 

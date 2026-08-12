@@ -33,7 +33,7 @@ class ProteinUseCase @Inject constructor(
     }
 
     suspend fun updateProtein(
-        id: String,
+        id: Long,
         foodName: String,
         gramsConsumed: Double,
         proteinGrams: Double,
@@ -58,6 +58,6 @@ class ProteinUseCase @Inject constructor(
         )
     }
 
-    suspend fun deleteProtein(id: String): Result<Unit> =
+    suspend fun deleteProtein(id: Long): Result<Unit> =
         repository.deleteProtein(id)
 }

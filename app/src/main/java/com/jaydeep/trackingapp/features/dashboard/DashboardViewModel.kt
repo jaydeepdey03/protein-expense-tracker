@@ -10,21 +10,23 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 data class DashboardUiState(
     val userName: String = "",
     val userEmail: String = "",
-    val today: String = LocalDate.now().toString(),
-    // Today'****pense summary
-    val todayExpenseTotal: Double = 0.0,
-    val todayExpenseCount: Int = 0,
-    // Today's protein summary
+    val today: String = LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, d MMMM")),
+    // Goals
+    val dailyProteinGoal: Float = 120f,
+    val monthlyExpenseBudget: Float = 25000f,
+    // Progress values
     val todayProteinTotal: Double = 0.0,
-    val todayProteinCount: Int = 0,
+    val monthlyExpenseTotal: Double = 0.0,
     // Recent entries
     val recentExpenses: List<RecentExpenseItem> = emptyList(),
     val recentProteins: List<RecentProteinItem> = emptyList(),
@@ -61,6 +63,25 @@ class DashboardViewModel @Inject constructor(
     init {
         loadUser()
         observeData()
+        syncData()
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            expenseRepository.syncExpenses()
+            proteinRepository.syncProteins()
+            _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    private fun syncData() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            expenseRepository.syncExpenses()
+            proteinRepository.syncProteins()
+            _uiState.update { it.copy(isLoading = false) }
+        }
     }
 
     private fun loadUser() {
@@ -68,7 +89,7 @@ class DashboardViewModel @Inject constructor(
             val user = tokenStore.getUser()
             _uiState.update {
                 it.copy(
-                    userName = user?.name ?: "",
+                    userName = user?.name ?: "User",
                     userEmail = user?.email ?: "",
                 )
             }
@@ -77,44 +98,54 @@ class DashboardViewModel @Inject constructor(
 
     private fun observeData() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
             combine(
                 expenseRepository.getExpenses(),
                 proteinRepository.getProteins(),
-            ) { expenses, proteins ->
-                val today = LocalDate.now().toString()
-                val todayExpenses = expenses.filter { it.date == today }
-                val todayProteins = proteins.filter { it.date == today }
+                tokenStore.proteinGoal,
+                tokenStore.expenseBudget
+            ) { expenses, proteins, proteinGoal, expenseBudget ->
+                val today = LocalDate.now()
+                val todayStr = today.toString()
+                val currentMonth = today.monthValue
+                val currentYear = today.year
 
-                _uiState.value.copy(
-                    today = today,
-                    todayExpenseTotal = todayExpenses.sumOf { it.amount },
-                    todayExpenseCount = todayExpenses.size,
-                    todayProteinTotal = todayProteins.sumOf { it.proteinGrams },
-                    todayProteinCount = todayProteins.size,
-                    recentExpenses = todayExpenses.take(3).map {
-                        RecentExpenseItem(
-                            id = it.id,
-                            title = it.title,
-                            category = it.category,
-                            amount = it.amount,
-                            currency = it.currency,
-                            date = it.date,
-                        )
-                    },
-                    recentProteins = todayProteins.take(3).map {
-                        RecentProteinItem(
-                            id = it.id,
-                            foodName = it.foodName,
-                            proteinGrams = it.proteinGrams,
-                            date = it.date,
-                        )
-                    },
-                    isLoading = false,
-                )
-            }.collect { state ->
-                _uiState.update { state }
-            }
+                val todayProteins = proteins.filter { it.date == todayStr }
+                val monthlyExpenses = expenses.filter {
+                    val date = try {
+                        LocalDate.parse(it.date)
+                    } catch (e: Exception) {
+                        null
+                    }
+                    date?.monthValue == currentMonth && date?.year == currentYear
+                }
+
+                _uiState.update {
+                    it.copy(
+                        dailyProteinGoal = proteinGoal,
+                        monthlyExpenseBudget = expenseBudget,
+                        todayProteinTotal = todayProteins.sumOf { p -> p.proteinGrams },
+                        monthlyExpenseTotal = monthlyExpenses.sumOf { e -> e.amount },
+                        recentExpenses = expenses.sortedByDescending { e -> e.date }.take(10).map { e ->
+                            RecentExpenseItem(
+                                id = e.id,
+                                title = e.title,
+                                category = e.category,
+                                amount = e.amount,
+                                currency = e.currency,
+                                date = e.date,
+                            )
+                        },
+                        recentProteins = proteins.sortedByDescending { p -> p.date }.take(10).map { p ->
+                            RecentProteinItem(
+                                id = p.id,
+                                foodName = p.foodName,
+                                proteinGrams = p.proteinGrams,
+                                date = p.date,
+                            )
+                        },
+                    )
+                }
+            }.collect {}
         }
     }
 
@@ -122,6 +153,18 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             tokenStore.clear()
             _uiState.update { it.copy(isLoggedOut = true) }
+        }
+    }
+
+    fun deleteExpense(id: String) {
+        viewModelScope.launch {
+            expenseRepository.deleteExpense(id)
+        }
+    }
+
+    fun deleteProtein(id: Long) {
+        viewModelScope.launch {
+            proteinRepository.deleteProtein(id)
         }
     }
 }
