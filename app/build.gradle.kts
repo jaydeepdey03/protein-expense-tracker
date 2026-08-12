@@ -125,6 +125,10 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended) // Optional: for extended icon set
 
 
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
+
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

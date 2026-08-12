@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ExpenseDao {
-
     @Query("SELECT * FROM expenses ORDER BY date DESC")
     fun getAll(): Flow<List<ExpenseEntity>>
 
@@ -18,13 +17,13 @@ interface ExpenseDao {
     suspend fun getById(id: String): ExpenseEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(expense: ExpenseEntity)
+    suspend fun insert(expenseEntity: ExpenseEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(expenses: List<ExpenseEntity>)
 
     @Update
-    suspend fun update(expense: ExpenseEntity)
+    suspend fun update(expenseEntity: ExpenseEntity)
 
     @Query("DELETE FROM expenses WHERE id = :id")
     suspend fun deleteById(id: String)

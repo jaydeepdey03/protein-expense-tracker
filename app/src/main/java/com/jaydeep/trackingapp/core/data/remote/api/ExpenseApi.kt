@@ -1,33 +1,29 @@
 package com.jaydeep.trackingapp.core.data.remote.api
 
-import com.jaydeep.trackingapp.core.data.remote.dto.CreateExpenseRequest
-import com.jaydeep.trackingapp.core.data.remote.dto.ExpenseDto
-import com.jaydeep.trackingapp.core.data.remote.dto.UpdateExpenseRequest
+import com.jaydeep.trackingapp.core.data.remote.dto.CreateExpenseEntryRequest
+import com.jaydeep.trackingapp.core.data.remote.dto.DailyExpenseSummaryResponse
+import com.jaydeep.trackingapp.core.data.remote.dto.ExpenseEntryResponse
+import com.jaydeep.trackingapp.core.data.remote.dto.UpdateExpenseEntryRequest
 import retrofit2.Response
-import retrofit2.http.Body
-import retrofit2.http.DELETE
-import retrofit2.http.GET
-import retrofit2.http.POST
-import retrofit2.http.PUT
-import retrofit2.http.Path
+import retrofit2.http.*
 
 interface ExpenseApi {
 
-    @GET("expenses")
-    suspend fun getExpenses(): Response<List<ExpenseDto>>
+    @POST("api/expenses/entries")
+    suspend fun createEntry(@Body request: CreateExpenseEntryRequest): Response<ExpenseEntryResponse>
 
-    @GET("expenses/{id}")
-    suspend fun getExpense(@Path("id") id: Long): Response<ExpenseDto>
+    @PUT("api/expenses/entries/{entryId}")
+    suspend fun updateEntry(
+        @Path("entryId") entryId: String,
+        @Body request: UpdateExpenseEntryRequest
+    ): Response<ExpenseEntryResponse>
 
-    @POST("expenses")
-    suspend fun createExpense(@Body request: CreateExpenseRequest): Response<ExpenseDto>
+    @DELETE("api/expenses/entries/{entryId}")
+    suspend fun deleteEntry(@Path("entryId") entryId: String): Response<Unit>
 
-    @PUT("expenses/{id}")
-    suspend fun updateExpense(
-        @Path("id") id: Long,
-        @Body request: UpdateExpenseRequest,
-    ): Response<ExpenseDto>
+    @GET("api/expenses/entries")
+    suspend fun getEntries(@Query("date") date: String): Response<List<ExpenseEntryResponse>>
 
-    @DELETE("expenses/{id}")
-    suspend fun deleteExpense(@Path("id") id: Long): Response<Unit>
+    @GET("api/expenses/summary")
+    suspend fun getSummary(@Query("date") date: String): Response<DailyExpenseSummaryResponse>
 }

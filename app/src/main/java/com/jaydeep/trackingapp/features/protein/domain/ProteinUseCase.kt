@@ -1,8 +1,8 @@
-package com.jaydeep.trackingapp.features.auth.domain
+package com.jaydeep.trackingapp.features.protein.domain
 
 import com.jaydeep.trackingapp.core.data.repository.ProteinRepository
-import javax.inject.Inject
 import com.jaydeep.trackingapp.util.Result
+import javax.inject.Inject
 
 class ProteinUseCase @Inject constructor(
     private val repository: ProteinRepository,

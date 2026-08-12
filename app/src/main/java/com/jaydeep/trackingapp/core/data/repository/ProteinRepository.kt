@@ -3,9 +3,9 @@ package com.jaydeep.trackingapp.core.data.repository
 import com.jaydeep.trackingapp.core.data.local.dao.ProteinDao
 import com.jaydeep.trackingapp.core.data.local.entities.ProteinEntity
 import com.jaydeep.trackingapp.core.data.remote.api.ProteinApi
-import com.jaydeep.trackingapp.core.data.remote.dto.CreateProteinRequest
-import com.jaydeep.trackingapp.core.data.remote.dto.ProteinDto
-import com.jaydeep.trackingapp.core.data.remote.dto.UpdateProteinRequest
+import com.jaydeep.trackingapp.core.data.remote.dto.CreateProteinEntryRequest
+import com.jaydeep.trackingapp.core.data.remote.dto.ProteinEntryResponse
+import com.jaydeep.trackingapp.core.data.remote.dto.UpdateProteinEntryRequest
 import com.jaydeep.trackingapp.util.Result
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -21,52 +21,46 @@ class ProteinRepository @Inject constructor(
 
     fun getProteins(): Flow<List<ProteinEntity>> = proteinDao.getAll()
 
+    suspend fun getProteinById(id: String): ProteinEntity? = proteinDao.getById(id)
+
     suspend fun syncProteins(): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching {
-            val response = proteinApi.getProteins()
-            if (response.isSuccessful) {
-                val remote = response.body() ?: emptyList()
-                proteinDao.insertAll(remote.map { it.toEntity(isSynced = true) })
-            } else {
-                error("Sync failed: ${response.code()}")
-            }
-        }.fold(
-            onSuccess = { Result.Success(Unit) },
-            onFailure = { Result.Error(it.message ?: "Sync failed") },
-        )
+        // Full sync is no longer supported by the API.
+        // Syncing individual unsynced entries is handled by SyncWorker.
+        Result.Success(Unit)
     }
 
     suspend fun createProtein(
         foodName: String,
+        gramsConsumed: Double,
         proteinGrams: Double,
         calories: Int?,
         note: String?,
         date: String,
     ): Result<Unit> = withContext(Dispatchers.IO) {
-        // Insert optimistically with a local UUID — survives offline
+        // Insert optimistically with a local id — survives offline
         val local = ProteinEntity(
             foodName = foodName,
+            gramsConsumed = gramsConsumed,
             proteinGrams = proteinGrams,
             calories = calories,
             note = note,
             date = date,
             isSynced = false,
         )
-        proteinDao.insert(local)
+        val localId = proteinDao.insert(local)
 
         runCatching {
-            val response = proteinApi.createProtein(
-                CreateProteinRequest(
+            val response = proteinApi.createEntry(
+                CreateProteinEntryRequest(
                     foodName = foodName,
+                    gramsConsumed = gramsConsumed,
                     proteinGrams = proteinGrams,
-                    calories = calories,
-                    note = note,
-                    date = date,
+                    entryDate = date,
                 )
             )
             if (response.isSuccessful) {
-                // Drop the local UUID record, replace with server-assigned String id
-                proteinDao.deleteById(local.id.toString())
+                // Drop the local record, replace with server-assigned String id (remoteId)
+                proteinDao.deleteById(localId.toString())
                 proteinDao.insert(response.body()!!.toEntity(isSynced = true))
             } else {
                 error("Create failed: ${response.code()}")
@@ -80,15 +74,20 @@ class ProteinRepository @Inject constructor(
     suspend fun updateProtein(
         id: String,
         foodName: String,
+        gramsConsumed: Double,
         proteinGrams: Double,
         calories: Int?,
         note: String?,
         date: String,
     ): Result<Unit> = withContext(Dispatchers.IO) {
+        val existing = proteinDao.getById(id)
+        
         proteinDao.update(
             ProteinEntity(
                 id = id.toLong(),
+                remoteId = existing?.remoteId,
                 foodName = foodName,
+                gramsConsumed = gramsConsumed,
                 proteinGrams = proteinGrams,
                 calories = calories,
                 note = note,
@@ -97,15 +96,13 @@ class ProteinRepository @Inject constructor(
             )
         )
 
+        val remoteId = existing?.remoteId ?: return@withContext Result.Success(Unit)
+
         runCatching {
-            val response = proteinApi.updateProtein(
-                id = id,
-                request = UpdateProteinRequest(
-                    foodName = foodName,
+            val response = proteinApi.updateEntry(
+                entryId = remoteId,
+                request = UpdateProteinEntryRequest(
                     proteinGrams = proteinGrams,
-                    calories = calories,
-                    note = note,
-                    date = date,
                 )
             )
             if (response.isSuccessful) {
@@ -120,10 +117,13 @@ class ProteinRepository @Inject constructor(
     }
 
     suspend fun deleteProtein(id: String): Result<Unit> = withContext(Dispatchers.IO) {
+        val existing = proteinDao.getById(id)
         proteinDao.deleteById(id)
 
+        val remoteId = existing?.remoteId ?: return@withContext Result.Success(Unit)
+
         runCatching {
-            val response = proteinApi.deleteProtein(id)
+            val response = proteinApi.deleteEntry(remoteId)
             if (!response.isSuccessful) {
                 error("Delete failed: ${response.code()}")
             }
@@ -135,14 +135,12 @@ class ProteinRepository @Inject constructor(
 
     // --- Mappers ---
 
-    private fun ProteinDto.toEntity(isSynced: Boolean) = ProteinEntity(
-        id = id.toLong(),
+    private fun ProteinEntryResponse.toEntity(isSynced: Boolean) = ProteinEntity(
         remoteId = id,
         foodName = foodName,
+        gramsConsumed = gramsConsumed,
         proteinGrams = proteinGrams,
-        calories = calories,
-        note = note,
-        date = date,
+        date = entryDate,
         isSynced = isSynced,
     )
 }

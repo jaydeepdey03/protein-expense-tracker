@@ -23,7 +23,9 @@ object DatabaseModule {
             context,
             TrackerDatabase::class.java,
             "tracker.db",
-        ).build()
+        )
+            .fallbackToDestructiveMigration(false)
+            .build()
 
     @Provides
     fun provideExpenseDao(db: TrackerDatabase): ExpenseDao = db.expenseDao()

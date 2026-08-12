@@ -9,7 +9,7 @@ import com.jaydeep.trackingapp.core.data.local.entities.ProteinEntity
 
 @Database(
     entities = [ExpenseEntity::class, ProteinEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class TrackerDatabase : RoomDatabase() {

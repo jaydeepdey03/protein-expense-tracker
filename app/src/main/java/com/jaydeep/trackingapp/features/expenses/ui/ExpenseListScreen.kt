@@ -1,4 +1,4 @@
-package com.jaydeep.trackingapp.features.protein.ui
+package com.jaydeep.trackingapp.features.expenses.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,19 +14,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.jaydeep.trackingapp.core.data.local.entities.ProteinEntity
+import com.jaydeep.trackingapp.core.data.local.entities.ExpenseEntity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProteinListScreen(
-    onNavigateToEdit: (String?) -> Unit,
+fun ExpenseListScreen(
+    onNavigateToEdit: (String?) -> Unit,   // null = create
     onNavigateBack: () -> Unit,
-    viewModel: ProteinViewModel = hiltViewModel(),
+    viewModel: ExpenseViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.listUiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(Unit) { viewModel.syncProteins() }
+    LaunchedEffect(Unit) { viewModel.syncExpenses() }
 
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let {
@@ -38,17 +38,20 @@ fun ProteinListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Protein") },
+                title = { Text("Expenses") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
                     }
                 }
             )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { onNavigateToEdit(null) }) {
-                Icon(Icons.Default.Add, contentDescription = "Add protein entry")
+                Icon(Icons.Default.Add, contentDescription = "Add expense")
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -59,12 +62,12 @@ fun ProteinListScreen(
                 .padding(innerPadding),
         ) {
             when {
-                uiState.isLoading && uiState.proteins.isEmpty() ->
+                uiState.isLoading && uiState.expenses.isEmpty() ->
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
 
-                uiState.proteins.isEmpty() ->
+                uiState.expenses.isEmpty() ->
                     Text(
-                        text = "No protein entries yet.\nTap + to add one.",
+                        text = "No expenses yet.\nTap + to add one.",
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.align(Alignment.Center),
                     )
@@ -74,10 +77,10 @@ fun ProteinListScreen(
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        items(uiState.proteins, key = { it.id }) { protein ->
-                            ProteinListItem(
-                                protein = protein,
-                                onClick = { onNavigateToEdit(protein.id.toString()) },
+                        items(uiState.expenses, key = { it.id }) { expense ->
+                            ExpenseListItem(
+                                expense = expense,
+                                onClick = { onNavigateToEdit(expense.id) },
                             )
                         }
                     }
@@ -87,47 +90,47 @@ fun ProteinListScreen(
 }
 
 @Composable
-private fun ProteinListItem(
-    protein: ProteinEntity,
+private fun ExpenseListItem(
+    expense: ExpenseEntity,
     onClick: () -> Unit,
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = protein.foodName,
+                    text = expense.title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = protein.date,
+                    text = expense.category,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = expense.date,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = "${protein.proteinGrams}g",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                protein.calories?.let {
-                    Text(
-                        text = "$it kcal",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+            Text(
+                text = "${expense.currency} ${expense.amount}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+            )
         }
     }
 }

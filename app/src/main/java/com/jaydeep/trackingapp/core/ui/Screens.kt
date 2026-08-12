@@ -6,6 +6,7 @@ sealed class Screens(val route : String) {
 
     // ── Main ─────────────────────────────────────────────────────────────────
     data object Dashboard : Screens("dashboard")
+    data object Status : Screens("status")
     // ── Expenses ──────────────────────────────────────────────────────────────
     data object ExpenseList : Screens("expenses")
     data object ExpenseCreate : Screens("expenses/create")

@@ -4,31 +4,30 @@ import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
-data class ProteinDto(
+data class ProteinEntryResponse(
     @param:Json(name = "id") val id: String,
-    @param:Json(name = "food_name") val foodName: String,
-    @param:Json(name = "protein_grams") val proteinGrams: Double,
-    @param:Json(name = "calories") val calories: Int?,
-    @param:Json(name = "note") val note: String?,
-    @param:Json(name = "date") val date: String,
-    @param:Json(name = "created_at") val createdAt: String,
-    @param:Json(name = "updated_at") val updatedAt: String,
+    @param:Json(name = "foodName") val foodName: String,
+    @param:Json(name = "gramsConsumed") val gramsConsumed: Double,
+    @param:Json(name = "proteinGrams") val proteinGrams: Double,
+    @param:Json(name = "entryDate") val entryDate: String
 )
 
 @JsonClass(generateAdapter = true)
-data class CreateProteinRequest(
-    @param:Json(name = "food_name") val foodName: String,
-    @param:Json(name = "protein_grams") val proteinGrams: Double,
-    @param:Json(name = "calories") val calories: Int?,
-    @param:Json(name = "note") val note: String?,
-    @param:Json(name = "date") val date: String,
+data class CreateProteinEntryRequest(
+    @param:Json(name = "foodName") val foodName: String,
+    @param:Json(name = "gramsConsumed") val gramsConsumed: Double,
+    @param:Json(name = "proteinGrams") val proteinGrams: Double,
+    @param:Json(name = "entryDate") val entryDate: String
 )
 
 @JsonClass(generateAdapter = true)
-data class UpdateProteinRequest(
-    @param:Json(name = "food_name") val foodName: String,
-    @param:Json(name = "protein_grams") val proteinGrams: Double,
-    @param:Json(name = "calories") val calories: Int?,
-    @param:Json(name = "note") val note: String?,
+data class UpdateProteinEntryRequest(
+    @param:Json(name = "proteinGrams") val proteinGrams: Double
+)
+
+@JsonClass(generateAdapter = true)
+data class DailyProteinSummaryResponse(
     @param:Json(name = "date") val date: String,
+    @param:Json(name = "totalProteinGrams") val totalProteinGrams: Double,
+    @param:Json(name = "entryCount") val entryCount: Int
 )

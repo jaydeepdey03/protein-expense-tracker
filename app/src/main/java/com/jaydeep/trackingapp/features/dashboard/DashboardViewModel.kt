@@ -1,92 +1,126 @@
-package com.jaydeep.trackingapp.feature.dashboard
+package com.jaydeep.trackingapp.features.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jaydeep.trackingapp.core.data.remote.api.HealthApi
-import com.jaydeep.trackingapp.core.data.remote.dto.UserDto
-import com.jaydeep.trackingapp.core.data.repository.AuthRepository
+import com.jaydeep.trackingapp.core.data.repository.ExpenseRepository
+import com.jaydeep.trackingapp.core.data.repository.ProteinRepository
 import com.jaydeep.trackingapp.core.di.TokenStore
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 
 data class DashboardUiState(
+    val userName: String = "",
+    val userEmail: String = "",
+    val today: String = LocalDate.now().toString(),
+    // Today'****pense summary
+    val todayExpenseTotal: Double = 0.0,
+    val todayExpenseCount: Int = 0,
+    // Today's protein summary
+    val todayProteinTotal: Double = 0.0,
+    val todayProteinCount: Int = 0,
+    // Recent entries
+    val recentExpenses: List<RecentExpenseItem> = emptyList(),
+    val recentProteins: List<RecentProteinItem> = emptyList(),
     val isLoading: Boolean = false,
     val isLoggedOut: Boolean = false,
-    val user: UserDto? = null,
-    val accessTokenPreview: String? = null,
-    val refreshTokenPreview: String? = null,
-    val hasValidToken: Boolean = false,
-    val backendReachable: Boolean = false,
-    val backendStatus: String = "Checking…",
-    val googleIdTokenReceived: Boolean = false,
-    val googleEmailVerified: Boolean = false,
+)
+
+data class RecentExpenseItem(
+    val id: String,
+    val title: String,
+    val category: String,
+    val amount: Double,
+    val currency: String,
+    val date: String,
+)
+
+data class RecentProteinItem(
+    val id: Long,
+    val foodName: String,
+    val proteinGrams: Double,
+    val date: String,
 )
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
-    private val authRepository: AuthRepository,
+    private val expenseRepository: ExpenseRepository,
+    private val proteinRepository: ProteinRepository,
     private val tokenStore: TokenStore,
-    private val healthApi: HealthApi,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
     init {
-        load()
+        loadUser()
+        observeData()
     }
 
-    private fun load() {
+    private fun loadUser() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-
-            // Run token/user load and health check concurrently
-            val userDeferred         = async { tokenStore.getUser() }
-            val accessDeferred       = async { tokenStore.accessToken() }
-            val refreshDeferred      = async { tokenStore.refreshToken() }
-            val hasValidDeferred     = async { tokenStore.hasValidToken() }
-            val healthDeferred       = async { checkHealth() }
-
-            val user         = userDeferred.await()
-            val accessToken  = accessDeferred.await()
-            val refreshToken = refreshDeferred.await()
-            val hasValid     = hasValidDeferred.await()
-            val (reachable, statusText) = healthDeferred.await()
-
+            val user = tokenStore.getUser()
             _uiState.update {
                 it.copy(
-                    isLoading            = false,
-                    user                 = user,
-                    accessTokenPreview   = accessToken?.take(24)?.plus("…"),
-                    refreshTokenPreview  = refreshToken?.take(24)?.plus("…"),
-                    hasValidToken        = hasValid,
-                    backendReachable     = reachable,
-                    backendStatus        = statusText,
-                    googleEmailVerified  = user?.email?.isNotBlank() == true,
+                    userName = user?.name ?: "",
+                    userEmail = user?.email ?: "",
                 )
             }
         }
     }
 
-    private suspend fun checkHealth(): Pair<Boolean, String> {
-        return try {
-            val response = healthApi.getHealth()
-            val up = response.status.equals("UP", ignoreCase = true)
-            Pair(up, response.status)
-        } catch (e: Exception) {
-            Pair(false, e.message?.take(40) ?: "Error")
+    private fun observeData() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            combine(
+                expenseRepository.getExpenses(),
+                proteinRepository.getProteins(),
+            ) { expenses, proteins ->
+                val today = LocalDate.now().toString()
+                val todayExpenses = expenses.filter { it.date == today }
+                val todayProteins = proteins.filter { it.date == today }
+
+                _uiState.value.copy(
+                    today = today,
+                    todayExpenseTotal = todayExpenses.sumOf { it.amount },
+                    todayExpenseCount = todayExpenses.size,
+                    todayProteinTotal = todayProteins.sumOf { it.proteinGrams },
+                    todayProteinCount = todayProteins.size,
+                    recentExpenses = todayExpenses.take(3).map {
+                        RecentExpenseItem(
+                            id = it.id,
+                            title = it.title,
+                            category = it.category,
+                            amount = it.amount,
+                            currency = it.currency,
+                            date = it.date,
+                        )
+                    },
+                    recentProteins = todayProteins.take(3).map {
+                        RecentProteinItem(
+                            id = it.id,
+                            foodName = it.foodName,
+                            proteinGrams = it.proteinGrams,
+                            date = it.date,
+                        )
+                    },
+                    isLoading = false,
+                )
+            }.collect { state ->
+                _uiState.update { state }
+            }
         }
     }
 
     fun logout() {
         viewModelScope.launch {
-            authRepository.logout()
+            tokenStore.clear()
             _uiState.update { it.copy(isLoggedOut = true) }
         }
     }

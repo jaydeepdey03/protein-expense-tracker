@@ -15,5 +15,5 @@ data class ExpenseEntity(
     val notes: String?,
     val createdAt: String,
     val updatedAt: String,
-    val isSynced: Boolean = false,      // false = pending sync to server
+    val isSynced: Boolean = false,
 )

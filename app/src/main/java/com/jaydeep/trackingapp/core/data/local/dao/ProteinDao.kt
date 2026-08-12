@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ProteinDao {
-
     @Query("SELECT * FROM protein ORDER BY date DESC")
     fun getAll(): Flow<List<ProteinEntity>>
 
