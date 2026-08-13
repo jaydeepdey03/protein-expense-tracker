@@ -1,25 +1,35 @@
 package com.jaydeep.trackingapp.core.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
@@ -33,21 +43,27 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import com.jaydeep.trackingapp.ui.theme.LocalTrackerColors
+import com.jaydeep.trackingapp.ui.theme.TrackingAppTheme
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
 
 sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
-    object Dashboard : BottomNavItem(Screens.Dashboard.route, Icons.Default.Dashboard, "Dashboard")
-    object Status : BottomNavItem(Screens.Status.route, Icons.Default.TrackChanges, "Status")
-    object Analytics : BottomNavItem(Screens.Summary.route, Icons.Default.Analytics, "Analytics")
+    object Home : BottomNavItem(Screens.Dashboard.route, Icons.Default.Home, "Home")
+    object Transaction : BottomNavItem(Screens.Status.route, Icons.AutoMirrored.Filled.CompareArrows, "Transaction")
+    object Analytics : BottomNavItem(Screens.Summary.route, Icons.Default.BarChart, "Analytics")
     object Profile : BottomNavItem(Screens.Profile.route, Icons.Default.Person, "Profile")
 }
 
@@ -55,25 +71,25 @@ sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: 
 @Composable
 fun MainScreen(
     navController: NavHostController,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
-    var showBottomSheet by remember { mutableStateOf(false) }
+    var showBottomSheet by remember { mutableStateOf(value = false) }
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
 
     Scaffold(
         bottomBar = {
             NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 8.dp,
-                modifier = Modifier.height(80.dp)
+                containerColor = Color.White,
+                tonalElevation = 0.dp,
+                modifier = Modifier.height(100.dp)
             ) {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
 
                 val items = listOf(
-                    BottomNavItem.Dashboard,
-                    BottomNavItem.Status,
+                    BottomNavItem.Home,
+                    BottomNavItem.Transaction,
                     null, // Spacer for FAB
                     BottomNavItem.Analytics,
                     BottomNavItem.Profile
@@ -85,15 +101,27 @@ fun MainScreen(
                     } else {
                         val isSelected = currentDestination?.hierarchy?.any { it.route == item.route } == true
                         NavigationBarItem(
-                            icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label) },
+                            icon = { 
+                                Icon(
+                                    imageVector = item.icon, 
+                                    contentDescription = item.label,
+                                    modifier = Modifier.size(26.dp)
+                                ) 
+                            },
+                            label = { 
+                                Text(
+                                    text = item.label,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 12.sp
+                                ) 
+                            },
                             selected = isSelected,
                             colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                selectedIconColor = Color.Black,
+                                selectedTextColor = Color.Black,
+                                unselectedIconColor = Color.Gray,
+                                unselectedTextColor = Color.Gray,
+                                indicatorColor = Color.Transparent
                             ),
                             onClick = {
                                 navController.navigate(item.route) {
@@ -113,12 +141,13 @@ fun MainScreen(
             FloatingActionButton(
                 onClick = { showBottomSheet = true },
                 shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
+                containerColor = Color(0xFF5A57FF),
+                contentColor = Color.White,
                 modifier = Modifier
-                    .size(64.dp)
+                    .size(70.dp)
+                    .offset(y = 50.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add", modifier = Modifier.size(32.dp))
+                Icon(Icons.Default.Add, contentDescription = "Add", modifier = Modifier.size(36.dp))
             }
         },
         floatingActionButtonPosition = androidx.compose.material3.FabPosition.Center,
@@ -131,24 +160,46 @@ fun MainScreen(
     if (showBottomSheet) {
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
-            sheetState = sheetState
+            sheetState = sheetState,
+            containerColor = Color.White,
+            dragHandle = null
         ) {
-            Box(modifier = Modifier.padding(bottom = 32.dp)) {
-                Column {
-                    ListItem(
-                        headlineContent = { Text("Log Expense") },
-                        leadingContent = { Icon(Icons.Default.Savings, contentDescription = null, tint = LocalTrackerColors.current.expense) },
-                        modifier = Modifier.clickable {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+                    .padding(bottom = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Add New Entry",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 24.dp)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    ActionSquare(
+                        modifier = Modifier.weight(1f),
+                        title = "Log Expense",
+                        icon = Icons.Default.Savings,
+                        color = LocalTrackerColors.current.expense,
+                        onClick = {
                             scope.launch { sheetState.hide() }.invokeOnCompletion {
                                 showBottomSheet = false
                                 navController.navigate(Screens.ExpenseCreate.route)
                             }
                         }
                     )
-                    ListItem(
-                        headlineContent = { Text("Log Protein") },
-                        leadingContent = { Icon(Icons.Default.Restaurant, contentDescription = null, tint = LocalTrackerColors.current.protein) },
-                        modifier = Modifier.clickable {
+                    ActionSquare(
+                        modifier = Modifier.weight(1f),
+                        title = "Log Protein",
+                        icon = Icons.Default.Restaurant,
+                        color = LocalTrackerColors.current.protein,
+                        onClick = {
                             scope.launch { sheetState.hide() }.invokeOnCompletion {
                                 showBottomSheet = false
                                 navController.navigate(Screens.ProteinCreate.route)
@@ -156,6 +207,64 @@ fun MainScreen(
                         }
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun ActionSquare(
+    modifier: Modifier = Modifier,
+    title: String,
+    icon: ImageVector,
+    color: Color,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .height(140.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .background(color.copy(alpha = 0.2f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = title,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = color
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun MainScreenPreview() {
+    val navController = rememberNavController()
+    TrackingAppTheme {
+        MainScreen(navController = navController) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Text("Content Area")
             }
         }
     }

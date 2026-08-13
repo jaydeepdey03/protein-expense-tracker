@@ -43,12 +43,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jaydeep.trackingapp.core.ui.CategoryUtils
+import com.jaydeep.trackingapp.core.ui.MainScreen
 import com.jaydeep.trackingapp.ui.theme.LocalTrackerColors
+import com.jaydeep.trackingapp.ui.theme.TrackingAppTheme
+import androidx.navigation.compose.rememberNavController
 
 @Composable
 fun DashboardScreen(
@@ -57,11 +59,27 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    
+    DashboardContent(
+        uiState = uiState,
+        onRefresh = { viewModel.refresh() },
+        onNavigateToExpenseEdit = onNavigateToExpenseEdit,
+        onNavigateToProteinEdit = onNavigateToProteinEdit
+    )
+}
+
+@Composable
+fun DashboardContent(
+    uiState: DashboardUiState,
+    onRefresh: () -> Unit,
+    onNavigateToExpenseEdit: (String) -> Unit,
+    onNavigateToProteinEdit: (String) -> Unit,
+) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     PullToRefreshBox(
         isRefreshing = uiState.isLoading,
-        onRefresh = { viewModel.refresh() },
+        onRefresh = onRefresh,
         modifier = Modifier.fillMaxSize()
     ) {
         LazyColumn(
@@ -337,5 +355,37 @@ fun EmptyState(title: String, subtitle: String) {
     ) {
         Text(text = title, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
         Text(text = subtitle, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun DashboardWithBottomNavPreview() {
+    val sampleState = DashboardUiState(
+        userName = "Jaydeep Dey",
+        today = "Thursday, 13 August",
+        dailyProteinGoal = 120f,
+        monthlyExpenseBudget = 25000f,
+        todayProteinTotal = 85.0,
+        monthlyExpenseTotal = 12500.0,
+        recentExpenses = listOf(
+            RecentExpenseItem("1", "Grocery", "Food", 500.0, "INR", "2026-08-13"),
+            RecentExpenseItem("2", "Fuel", "Transport", 2000.0, "INR", "2026-08-12")
+        ),
+        recentProteins = listOf(
+            RecentProteinItem(1, "Chicken Breast", 30.0, "2026-08-13"),
+            RecentProteinItem(2, "Whey Protein", 25.0, "2026-08-13")
+        )
+    )
+    val navController = rememberNavController()
+    TrackingAppTheme {
+        MainScreen(navController = navController) {
+            DashboardContent(
+                uiState = sampleState,
+                onRefresh = {},
+                onNavigateToExpenseEdit = {},
+                onNavigateToProteinEdit = {}
+            )
+        }
     }
 }
