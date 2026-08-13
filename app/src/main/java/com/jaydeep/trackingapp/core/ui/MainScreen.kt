@@ -80,7 +80,7 @@ fun MainScreen(
     Scaffold(
         bottomBar = {
             NavigationBar(
-                containerColor = Color.White,
+                containerColor = MaterialTheme.colorScheme.surface,
                 tonalElevation = 0.dp,
                 modifier = Modifier.height(100.dp)
             ) {
@@ -117,10 +117,10 @@ fun MainScreen(
                             },
                             selected = isSelected,
                             colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
-                                selectedIconColor = Color.Black,
-                                selectedTextColor = Color.Black,
-                                unselectedIconColor = Color.Gray,
-                                unselectedTextColor = Color.Gray,
+                                selectedIconColor = MaterialTheme.colorScheme.onSurface,
+                                selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                 indicatorColor = Color.Transparent
                             ),
                             onClick = {
@@ -141,8 +141,8 @@ fun MainScreen(
             FloatingActionButton(
                 onClick = { showBottomSheet = true },
                 shape = CircleShape,
-                containerColor = Color(0xFF5A57FF),
-                contentColor = Color.White,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier
                     .size(70.dp)
                     .offset(y = 50.dp)
@@ -161,7 +161,7 @@ fun MainScreen(
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
             sheetState = sheetState,
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             dragHandle = null
         ) {
             Column(
@@ -175,6 +175,7 @@ fun MainScreen(
                     text = "Add New Entry",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 24.dp)
                 )
 

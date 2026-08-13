@@ -92,7 +92,6 @@ fun ProfileScreen(
                         }
                     )
                 })
-                SettingsItem(Icons.Outlined.Language, "Language")
             }
         }
         item {
