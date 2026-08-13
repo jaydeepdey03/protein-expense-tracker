@@ -55,7 +55,7 @@ fun AppNavGraph(
 fun NavContent(
     navController: NavHostController,
     modifier: Modifier,
-    startDestination: String
+    startDestination: String,
 ) {
     NavHost(
         navController = navController,
@@ -82,11 +82,6 @@ fun NavContent(
                 },
                 onNavigateToProteinEdit = { id ->
                     navController.navigate(Screens.ProteinEdit.createRoute(id))
-                },
-                onLogout = {
-                    navController.navigate(Screens.Login.route) {
-                        popUpTo(0) { inclusive = true }
-                    }
                 }
             )
         }

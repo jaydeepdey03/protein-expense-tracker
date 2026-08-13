@@ -1,6 +1,7 @@
 package com.jaydeep.trackingapp.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -77,12 +78,17 @@ fun ProfileScreen(
         }
 
         item {
+            val isDark = when (themeMode) {
+                ThemeMode.DARK -> true
+                ThemeMode.LIGHT -> false
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            }
             SettingsGroup("Preferences") {
                 SettingsItem(Icons.Outlined.DarkMode, "Dark Mode", trailing = {
                     Switch(
-                        checked = themeMode == ThemeMode.DARK,
+                        checked = isDark,
                         onCheckedChange = { 
-                            themeViewModel.setTheme(if (it) ThemeMode.DARK else ThemeMode.SYSTEM) 
+                            themeViewModel.setTheme(if (it) ThemeMode.DARK else ThemeMode.LIGHT) 
                         }
                     )
                 })

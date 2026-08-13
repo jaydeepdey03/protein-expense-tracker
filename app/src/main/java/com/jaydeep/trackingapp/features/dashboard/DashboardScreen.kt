@@ -20,22 +20,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -48,6 +42,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -58,7 +54,6 @@ import com.jaydeep.trackingapp.ui.theme.LocalTrackerColors
 fun DashboardScreen(
     onNavigateToExpenseEdit: (String) -> Unit,
     onNavigateToProteinEdit: (String) -> Unit,
-    onLogout: () -> Unit,
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -90,16 +85,10 @@ fun DashboardScreen(
             }
 
             item {
-                TabRow(
+                SecondaryTabRow(
                     selectedTabIndex = selectedTab,
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.primary,
-                    indicator = { tabPositions ->
-                        TabRowDefaults.SecondaryIndicator(
-                            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    },
                     divider = {}
                 ) {
                     Tab(
@@ -250,74 +239,29 @@ fun CircularProgressWithLabel(
         Box(contentAlignment = Alignment.Center) {
             CircularProgressIndicator(
                 progress = { 1f },
-                modifier = Modifier.size(80.dp),
+                modifier = Modifier.size(100.dp),
                 color = color.copy(alpha = 0.1f),
                 strokeWidth = 8.dp,
                 strokeCap = StrokeCap.Round
             )
             CircularProgressIndicator(
                 progress = { progress.coerceIn(0f, 1f) },
-                modifier = Modifier.size(80.dp),
+                modifier = Modifier.size(100.dp),
                 color = color,
                 strokeWidth = 8.dp,
                 strokeCap = StrokeCap.Round
             )
             Text(
+                modifier = Modifier.padding(8.dp),
                 text = "${"%.2f".format(progress * 100)}%",
                 fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
+                fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
         Spacer(modifier = Modifier.height(12.dp))
         Text(text = label, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
         Text(text = valueText, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-fun ProteinList(
-    proteins: List<RecentProteinItem>,
-    onEdit: (String) -> Unit
-) {
-    if (proteins.isEmpty()) {
-        EmptyState("No protein entries yet", "Start tracking your protein intake")
-    } else {
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(proteins) { item ->
-                ListItemCard(
-                    title = item.foodName,
-                    subtitle = "Protein · Today",
-                    value = "${item.proteinGrams.toInt()} g",
-                    category = item.foodName,
-                    isProtein = true,
-                    onClick = { onEdit(item.id.toString()) }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun ExpenseList(
-    expenses: List<RecentExpenseItem>,
-    onEdit: (String) -> Unit
-) {
-    if (expenses.isEmpty()) {
-        EmptyState("No expenses yet", "Start tracking your spending")
-    } else {
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(expenses) { item ->
-                ListItemCard(
-                    title = item.title,
-                    subtitle = "${item.category} · Today",
-                    value = "₹${item.amount.toInt()}",
-                    category = item.category,
-                    isProtein = false,
-                    onClick = { onEdit(item.id) }
-                )
-            }
-        }
     }
 }
 
