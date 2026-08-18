@@ -1,6 +1,5 @@
 package com.jaydeep.trackingapp.core.ui
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,8 +19,9 @@ import com.jaydeep.trackingapp.features.expenses.ui.ExpenseEditScreen
 import com.jaydeep.trackingapp.features.expenses.ui.ExpenseListScreen
 import com.jaydeep.trackingapp.features.protein.ui.ProteinEditScreen
 import com.jaydeep.trackingapp.features.protein.ui.ProteinListScreen
+import com.jaydeep.trackingapp.features.status.AnalyticsScreen
 import com.jaydeep.trackingapp.features.status.HealthStatusScreen
-import com.jaydeep.trackingapp.features.status.StatusScreen
+import com.jaydeep.trackingapp.features.status.TransactionScreen
 import com.jaydeep.trackingapp.ui.screens.ProfileScreen
 
 @Composable
@@ -86,16 +86,14 @@ fun NavContent(
             )
         }
 
-        // ── Status ───────────────────────────────────────────────────────────
+        // ── Status (Transactions) ───────────────────────────────────────────
         composable(Screens.Status.route) {
-            StatusScreen()
+            TransactionScreen()
         }
 
         // ── Analytics (Summary) ──────────────────────────────────────────────
         composable(Screens.Summary.route) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(text = "Analytics Coming Soon", style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
-            }
+            AnalyticsScreen()
         }
 
         // ── Expenses ──────────────────────────────────────────────────────────
@@ -159,13 +157,23 @@ fun NavContent(
         // ── Profile ──────────────────────────────────────────────────────────
         composable(Screens.Profile.route) {
             ProfileScreen(
-                onNavigateToHealthStatus = { navController.navigate(Screens.HealthStatus.route) }
+                onNavigateToHealthStatus = { navController.navigate(Screens.HealthStatus.route) },
+                onLogout = {
+                    navController.navigate(Screens.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
 
         composable(Screens.Settings.route) {
             ProfileScreen(
-                onNavigateToHealthStatus = { navController.navigate(Screens.HealthStatus.route) }
+                onNavigateToHealthStatus = { navController.navigate(Screens.HealthStatus.route) },
+                onLogout = {
+                    navController.navigate(Screens.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
 

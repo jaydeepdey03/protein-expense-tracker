@@ -50,10 +50,10 @@ fun TransactionItemRow(
                 text = amount,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                color = if (type == TransactionType.INCOME) LocalTrackerColors.current.success else MaterialTheme.colorScheme.error
+                color = if (type == TransactionType.PROTEIN) LocalTrackerColors.current.success else MaterialTheme.colorScheme.error
             )
             Text(
-                text = if (type == TransactionType.INCOME) "Income" else "Expense",
+                text = if (type == TransactionType.PROTEIN) "Protein" else "Expense",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

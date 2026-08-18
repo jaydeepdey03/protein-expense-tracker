@@ -14,7 +14,7 @@ data class Transaction(
     val iconRes: Int? = null
 )
 
-enum class TransactionType { INCOME, EXPENSE, TRANSFER }
+enum class TransactionType { EXPENSE, PROTEIN }
 
 enum class Category(val displayName: String, val color: Color) {
     SHOPPING("Shopping", Color(0xFF3B82F6)),

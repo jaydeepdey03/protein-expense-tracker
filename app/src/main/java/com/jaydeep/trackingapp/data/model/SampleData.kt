@@ -18,7 +18,7 @@ object SampleData {
             title = "Salary",
             subtitle = "Monthly Income",
             amount = 1980.00,
-            type = TransactionType.INCOME,
+            type = TransactionType.EXPENSE,
             category = Category.OTHERS,
             date = LocalDate.now()
         ),

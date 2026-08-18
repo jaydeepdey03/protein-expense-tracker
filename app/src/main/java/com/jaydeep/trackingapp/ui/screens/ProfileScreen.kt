@@ -1,12 +1,14 @@
 package com.jaydeep.trackingapp.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -25,6 +27,7 @@ import com.jaydeep.trackingapp.ui.theme.ThemeViewModel
 
 @Composable
 fun ProfileScreen(
+    onLogout : ()->Unit,
     onNavigateToHealthStatus: () -> Unit,
     profileViewModel: ProfileViewModel = hiltViewModel(),
     themeViewModel: ThemeViewModel = hiltViewModel()
@@ -34,6 +37,29 @@ fun ProfileScreen(
 
     var showProteinDialog by remember { mutableStateOf(false) }
     var showBudgetDialog by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(uiState.isLoggedOut) {
+        if (uiState.isLoggedOut) onLogout()
+    }
+
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Logout") },
+            text = { Text("Are you sure you want to logout?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLogoutDialog = false
+                    profileViewModel.logout()
+                }) { Text("Logout", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -96,7 +122,12 @@ fun ProfileScreen(
         }
         item {
             SettingsGroup("Account") {
-                SettingsItem(Icons.Outlined.Logout, "Sign Out", textColor = MaterialTheme.colorScheme.error)
+                SettingsItem(
+                    icon = Icons.AutoMirrored.Outlined.Logout,
+                    label = "Sign Out",
+                    textColor = MaterialTheme.colorScheme.error,
+                    onClick = { showLogoutDialog = true }
+                )
             }
         }
     }
@@ -217,9 +248,11 @@ private fun SettingsItem(
     icon: ImageVector,
     label: String,
     textColor: Color = MaterialTheme.colorScheme.onSurface,
+    onClick: () -> Unit = {},
     trailing: @Composable () -> Unit = { Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
 ) {
     ListItem(
+        modifier = Modifier.clickable(onClick = onClick),
         headlineContent = { Text(label, color = textColor) },
         leadingContent = { Icon(icon, null, tint = if (textColor == MaterialTheme.colorScheme.error) textColor else MaterialTheme.colorScheme.primary) },
         trailingContent = trailing,

@@ -4,6 +4,7 @@ import com.jaydeep.trackingapp.core.data.local.dao.ExpenseDao
 import com.jaydeep.trackingapp.core.data.local.entities.ExpenseEntity
 import com.jaydeep.trackingapp.core.data.remote.api.ExpenseApi
 import com.jaydeep.trackingapp.core.data.remote.dto.CreateExpenseEntryRequest
+import com.jaydeep.trackingapp.core.data.remote.dto.DailyExpenseSummaryResponse
 import com.jaydeep.trackingapp.core.data.remote.dto.ExpenseEntryResponse
 import com.jaydeep.trackingapp.core.data.remote.dto.UpdateExpenseEntryRequest
 import com.jaydeep.trackingapp.util.Result
@@ -168,6 +169,36 @@ class ExpenseRepository @Inject constructor(
             onSuccess = { Result.Success(Unit) },
             onFailure = { Result.Error(it.message ?: "Delete failed") },
         )
+    }
+
+    suspend fun getDailyExpenseSummary(date: String): Result<DailyExpenseSummaryResponse> = withContext(Dispatchers.IO) {
+        runCatching {
+            val response = expenseApi.getSummary(date)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) Result.Success(body)
+                else Result.Error("Empty response body")
+            } else {
+                Result.Error("Failed to fetch summary: ${response.code()}")
+            }
+        }.getOrElse {
+            Result.Error(it.message ?: "Unknown error")
+        }
+    }
+
+    suspend fun getDailyExpenseEntries(date: String): Result<List<ExpenseEntryResponse>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val response = expenseApi.getEntries(date)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) Result.Success(body)
+                else Result.Error("Empty response body")
+            } else {
+                Result.Error("Failed to fetch entries: ${response.code()}")
+            }
+        }.getOrElse {
+            Result.Error(it.message ?: "Unknown error")
+        }
     }
 
     private suspend fun ExpenseEntryResponse.toEntity(isSynced: Boolean) = ExpenseEntity(

@@ -4,6 +4,7 @@ import com.jaydeep.trackingapp.core.data.local.dao.ProteinDao
 import com.jaydeep.trackingapp.core.data.local.entities.ProteinEntity
 import com.jaydeep.trackingapp.core.data.remote.api.ProteinApi
 import com.jaydeep.trackingapp.core.data.remote.dto.CreateProteinEntryRequest
+import com.jaydeep.trackingapp.core.data.remote.dto.DailyProteinSummaryResponse
 import com.jaydeep.trackingapp.core.data.remote.dto.ProteinEntryResponse
 import com.jaydeep.trackingapp.core.data.remote.dto.UpdateProteinEntryRequest
 import com.jaydeep.trackingapp.util.Result
@@ -156,6 +157,36 @@ class ProteinRepository @Inject constructor(
             onSuccess = { Result.Success(Unit) },
             onFailure = { Result.Error(it.message ?: "Delete failed") },
         )
+    }
+
+    suspend fun getDailyProteinSummary(date: String): Result<DailyProteinSummaryResponse> = withContext(Dispatchers.IO) {
+        runCatching {
+            val response = proteinApi.getSummary(date)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) Result.Success(body)
+                else Result.Error("Empty response body")
+            } else {
+                Result.Error("Failed to fetch summary: ${response.code()}")
+            }
+        }.getOrElse {
+            Result.Error(it.message ?: "Unknown error")
+        }
+    }
+
+    suspend fun getDailyProteinEntries(date: String): Result<List<ProteinEntryResponse>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val response = proteinApi.getEntries(date)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) Result.Success(body)
+                else Result.Error("Empty response body")
+            } else {
+                Result.Error("Failed to fetch entries: ${response.code()}")
+            }
+        }.getOrElse {
+            Result.Error(it.message ?: "Unknown error")
+        }
     }
 
     // --- Mappers ---
