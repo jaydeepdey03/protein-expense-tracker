@@ -17,9 +17,9 @@ import javax.inject.Singleton
 
 @Singleton
 class ExpenseRepository @Inject constructor(
-private val expenseDao: ExpenseDao,
-private val expenseApi: ExpenseApi,
-private val workManager: androidx.work.WorkManager,
+    private val expenseDao: ExpenseDao,
+    private val expenseApi: ExpenseApi,
+    private val tokenStore: com.jaydeep.trackingapp.core.di.TokenStore,
 ) {
 
     fun getExpenses(): Flow<List<ExpenseEntity>> = expenseDao.getAll()
@@ -27,8 +27,6 @@ private val workManager: androidx.work.WorkManager,
     suspend fun getExpenseById(id: String): ExpenseEntity? = expenseDao.getById(id)
 
     suspend fun syncExpenses(): Result<Unit> = withContext(Dispatchers.IO) {
-        // Push local changes first
-        com.jaydeep.trackingapp.core.sync.SyncWorker.enqueueNow(workManager)
 
         runCatching {
             val today = java.time.LocalDate.now()
@@ -41,9 +39,7 @@ private val workManager: androidx.work.WorkManager,
                     val serverIds = serverEntries.map { it.id }.toSet()
 
                     // Get local synced entries for this date
-                    val localEntries = expenseDao.getAll().first().filter { 
-                        it.date == date && it.isSynced 
-                    }
+                    val localEntries = expenseDao.getSyncedByDate(date)
 
                     // Delete local entries that are no longer on server
                     for (local in localEntries) {
@@ -71,7 +67,7 @@ private val workManager: androidx.work.WorkManager,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val local = ExpenseEntity(
             id = UUID.randomUUID().toString(),
-            userId = "",
+            userId = tokenStore.getUser()?.id ?: "",
             title = description,
             amount = amount,
             currency = currency,
@@ -97,13 +93,10 @@ private val workManager: androidx.work.WorkManager,
             if (response.isSuccessful) {
                 expenseDao.deleteById(local.id)
                 expenseDao.insert(response.body()!!.toEntity(isSynced = true))
-            } else {
-                error("Create failed: ${response.code()}")
             }
-        }.fold(
-            onSuccess = { Result.Success(Unit) },
-            onFailure = { Result.Error(it.message ?: "Create failed") },
-        )
+        }
+        
+        return@withContext Result.Success(Unit)
     }
 
     suspend fun updateExpense(
@@ -120,7 +113,7 @@ private val workManager: androidx.work.WorkManager,
         expenseDao.update(
             ExpenseEntity(
                 id = id,
-                userId = "",
+                userId = tokenStore.getUser()?.id ?: "",
                 title = description,
                 amount = amount,
                 currency = currency,
@@ -177,9 +170,9 @@ private val workManager: androidx.work.WorkManager,
         )
     }
 
-    private fun ExpenseEntryResponse.toEntity(isSynced: Boolean) = ExpenseEntity(
+    private suspend fun ExpenseEntryResponse.toEntity(isSynced: Boolean) = ExpenseEntity(
         id = id,
-        userId = "",
+        userId = tokenStore.getUser()?.id ?: "",
         title = description,
         amount = amount,
         currency = currency,
@@ -190,4 +183,30 @@ private val workManager: androidx.work.WorkManager,
         updatedAt = entryDate,
         isSynced = isSynced,
     )
+
+    suspend fun pushUnsyncedExpenses() {
+        val unsyncedExpenses = expenseDao.getUnsynced()
+        if (unsyncedExpenses.isEmpty()) return
+        unsyncedExpenses.forEach { entity ->
+            try {
+                val response = expenseApi.createEntry(
+                    CreateExpenseEntryRequest(
+                        description = entity.title,
+                        amount = entity.amount,
+                        category = entity.category,
+                        currency = entity.currency,
+                        entryDate = entity.date
+                    )
+                )
+                if (response.isSuccessful) {
+                    val serverDto = response.body()
+                    if (serverDto != null) {
+                        expenseDao.markSynced(entity.id, serverDto.id)
+                    }
+                }
+            } catch (e: Exception) {
+                // Let worker retry
+            }
+        }
+    }
 }

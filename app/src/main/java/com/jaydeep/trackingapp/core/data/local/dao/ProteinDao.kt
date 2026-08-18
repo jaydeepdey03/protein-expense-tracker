@@ -33,4 +33,13 @@ interface ProteinDao {
 
     @Query("UPDATE protein SET isSynced = 1 WHERE id = :id")
     suspend fun markSynced(id: Long)
+
+    @Query("UPDATE protein SET isSynced = 1, remoteId = :remoteId WHERE id = :localId")
+    suspend fun markSynced(localId: Long, remoteId: String)
+
+    @Query("SELECT * FROM protein WHERE date = :date AND isSynced = 1")
+    suspend fun getSyncedByDate(date: String): List<ProteinEntity>
+
+    @Query("DELETE FROM protein WHERE date = :date AND isSynced = 1")
+    suspend fun deleteSyncedByDate(date: String)
 }

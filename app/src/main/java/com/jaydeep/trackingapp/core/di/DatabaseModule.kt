@@ -24,7 +24,7 @@ object DatabaseModule {
             TrackerDatabase::class.java,
             "tracker.db",
         )
-            .fallbackToDestructiveMigration(false)
+            .fallbackToDestructiveMigration(true)
             .build()
 
     @Provides

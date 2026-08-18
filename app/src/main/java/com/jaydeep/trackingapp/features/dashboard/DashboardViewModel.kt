@@ -63,19 +63,10 @@ class DashboardViewModel @Inject constructor(
     init {
         loadUser()
         observeData()
-        syncData()
+        refresh()
     }
 
     fun refresh() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            expenseRepository.syncExpenses()
-            proteinRepository.syncProteins()
-            _uiState.update { it.copy(isLoading = false) }
-        }
-    }
-
-    private fun syncData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             expenseRepository.syncExpenses()

@@ -18,7 +18,6 @@ import javax.inject.Singleton
 class ProteinRepository @Inject constructor(
     private val proteinDao: ProteinDao,
     private val proteinApi: ProteinApi,
-    private val workManager: androidx.work.WorkManager,
 ) {
 
     fun getProteins(): Flow<List<ProteinEntity>> = proteinDao.getAll()
@@ -26,8 +25,6 @@ class ProteinRepository @Inject constructor(
     suspend fun getProteinById(id: Long): ProteinEntity? = proteinDao.getById(id)
 
     suspend fun syncProteins(): Result<Unit> = withContext(Dispatchers.IO) {
-        // Push local changes first
-        com.jaydeep.trackingapp.core.sync.SyncWorker.enqueueNow(workManager)
 
         runCatching {
             val today = java.time.LocalDate.now()
@@ -40,9 +37,7 @@ class ProteinRepository @Inject constructor(
                     val serverRemoteIds = serverEntries.map { it.id }.toSet()
 
                     // Get local synced entries for this date
-                    val localEntries = proteinDao.getAll().first().filter { 
-                        it.date == date && it.isSynced 
-                    }
+                    val localEntries = proteinDao.getSyncedByDate(date)
 
                     // Delete local entries that are no longer on server
                     for (local in localEntries) {
@@ -51,6 +46,7 @@ class ProteinRepository @Inject constructor(
                         }
                     }
 
+                    proteinDao.deleteSyncedByDate(date)
                     // Insert/Update from server
                     proteinDao.insertAll(serverEntries.map { it.toEntity(isSynced = true) })
                 }
@@ -94,13 +90,10 @@ class ProteinRepository @Inject constructor(
                 // Drop the local record, replace with server-assigned String id (remoteId)
                 proteinDao.deleteById(localId)
                 proteinDao.insert(response.body()!!.toEntity(isSynced = true))
-            } else {
-                error("Create failed: ${response.code()}")
             }
-        }.fold(
-            onSuccess = { Result.Success(Unit) },
-            onFailure = { Result.Error(it.message ?: "Create failed") },
-        )
+        }
+        
+        return@withContext Result.Success(Unit)
     }
 
     suspend fun updateProtein(
@@ -175,4 +168,41 @@ class ProteinRepository @Inject constructor(
         date = entryDate,
         isSynced = isSynced,
     )
+
+    suspend fun pushUnsyncedProteins() {
+        val unsyncedProteins = proteinDao.getUnsynced()
+        if (unsyncedProteins.isEmpty()) return
+        unsyncedProteins.forEach { entity ->
+            try {
+                if (entity.remoteId == null) {
+                    val response = proteinApi.createEntry(
+                        CreateProteinEntryRequest(
+                            foodName = entity.foodName,
+                            gramsConsumed = entity.gramsConsumed,
+                            proteinGrams = entity.proteinGrams,
+                            entryDate = entity.date
+                        )
+                    )
+                    if (response.isSuccessful) {
+                        val serverDto = response.body()
+                        if (serverDto != null) {
+                            proteinDao.markSynced(entity.id, serverDto.id)
+                        }
+                    }
+                } else {
+                    val response = proteinApi.updateEntry(
+                        entryId = entity.remoteId,
+                        request = UpdateProteinEntryRequest(
+                            proteinGrams = entity.proteinGrams
+                        )
+                    )
+                    if (response.isSuccessful) {
+                        proteinDao.markSynced(entity.id)
+                    }
+                }
+            } catch (e: Exception) {
+                // Let worker retry
+            }
+        }
+    }
 }

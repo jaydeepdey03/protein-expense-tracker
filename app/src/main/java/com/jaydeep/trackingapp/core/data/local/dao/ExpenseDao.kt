@@ -33,4 +33,10 @@ interface ExpenseDao {
 
     @Query("UPDATE expenses SET isSynced = 1 WHERE id = :id")
     suspend fun markSynced(id: String)
+
+    @Query("UPDATE expenses SET isSynced = 1, id = :remoteId WHERE id = :localId")
+    suspend fun markSynced(localId: String, remoteId: String)
+
+    @Query("SELECT * FROM expenses WHERE date = :date AND isSynced = 1")
+    suspend fun getSyncedByDate(date: String): List<ExpenseEntity>
 }

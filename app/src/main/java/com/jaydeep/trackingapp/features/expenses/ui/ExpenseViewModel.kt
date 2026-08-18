@@ -131,6 +131,7 @@ class ExpenseViewModel @Inject constructor(
 
     fun saveExpense(existingId: String?) {
         if (!validate()) return
+        if (_editUiState.value.isLoading) return
 
         val state = _editUiState.value
         val amount = state.amount.toDouble()

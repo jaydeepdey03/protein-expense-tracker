@@ -146,6 +146,7 @@ class ProteinViewModel @Inject constructor(
 
     fun saveProtein(existingId: Long?) {
         if (!validate()) return
+        if (_editUiState.value.isLoading) return
 
         val state = _editUiState.value
         val proteinGramsValue = state.proteinGrams.toDoubleOrNull() ?: 0.0
